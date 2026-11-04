@@ -1,0 +1,76 @@
+# Navidrome 音乐库：主人的音乐放在共享文件夹 music 里，网页经核心网关登录（Remote-User 请求头代登录），
+# 经网关提供 Subsonic 兼容接口（第三方 Subsonic 客户端进不了网关）。上游 GPL-3.0-only，镜像按清单列表（index）的摘要固定。
+services:
+  navidrome:
+    image: deluan/navidrome:0.64.2@sha256:38dc2727bfcfd5ede290f8ada114fc90368146f265ae4701ddddbcbe2a44ee52
+    # 镜像不依赖 root：以主人用户运行，数据目录由核心按 user 交给 PUID:PGID，宿主上的文件归主人。
+    # 音乐目录只读（storage.share.music:read）；持久数据和缓存在 /data，临时文件在 /tmp，根文件系统无需可写。
+    user: "${PUID}:${PGID}"
+    read_only: true
+    tmpfs:
+      - /tmp
+    environment:
+      # ND_ 变量名必须全大写（Navidrome 用 ND_<大写键> 查环境变量），小写不生效。
+      ND_MUSICFOLDER: /music
+      ND_DATAFOLDER: /data
+      # 加密保存的密码用它，不用 Navidrome 内置的默认密钥（升级、迁移后保持同一把）。
+      ND_PASSWORDENCRYPTIONKEY: ${WONTON_SECRET_PASSWORD_ENCRYPTION_KEY}
+      # 不申请 network.egress，外部服务（Deezer、Last.fm、ListenBrainz、insights、外部歌单封面）取不到，
+      # 显式关掉：否则它们会一直在内部网络上重试、写错误日志。这是 0.64 的总开关，会一并清空 Agents。
+      ND_ENABLEEXTERNALSERVICES: "false"
+      # 分享链接指向插件子域名，收件人没有云吞会话、会被跳到核心登录页，所以关掉分享。
+      ND_ENABLESHARING: "false"
+      # 网关代登录：只信任核心的地址。Navidrome 的白名单只认 CIDR，要带 /32。
+      ND_REVERSEPROXYUSERHEADER: Remote-User
+      ND_REVERSEPROXYWHITELIST: ${WONTON_CORE_ADDRESS}/32
+    volumes:
+      - ${WONTON_APP_DATA}/data:/data
+      - ${WONTON_SHARE_MUSIC}:/music:ro
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:4533/ping"]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      start_interval: 1s
+
+x-wonton:
+  spec: "0.4"
+  id: org.navidrome.navidrome
+  version: 0.1.0
+  kind: app
+  title: { zh: 音乐, en: Music }
+  description: { zh: 流媒体音乐库，扫描共享文件夹里的音乐播放, en: Streaming music library from the shared music folder }
+  icon: icon.png
+  notices: [NOTICE]
+  category: media
+  screenshots: [screenshots/home.png, screenshots/album.png, screenshots/player.png]
+  author: { name: geraldpeng6 }
+  homepage: https://www.navidrome.org
+  license: GPL-3.0-only
+  tags: [音乐, music, subsonic, navidrome, 流媒体]
+  about:
+    zh: |
+      把共享文件夹 music 里的音乐变成主人的流媒体音乐库：网页上按歌手、专辑、流派浏览和播放，建歌单。
+
+      登录交给云吞：打开就是主人自己的账号，不用再登一次。同时经网关提供 Subsonic 兼容接口；第三方 Subsonic 客户端连不上（网关只认云吞登录）。
+
+      不申请出网权限，外部服务（歌手图片、Last.fm 等）已关闭。公开分享也关闭，因为链接接收者没有云吞会话。音乐库只读挂载，插件不改动音乐文件。
+    en: |
+      Turns the music in the shared folder into the owner's streaming library: browse and play by artist, album and genre, and build playlists.
+
+      Sign-in is handled by Wonton: opening the app is already the owner's account. A Subsonic-compatible API is exposed through the gateway; third-party Subsonic clients cannot connect (the gateway only accepts Wonton sessions).
+
+      No network egress is requested, so external services (artist images, Last.fm and so on) are disabled. Public sharing is disabled because recipients have no Wonton session. The music folder is mounted read-only.
+  release_notes: { zh: 第一版。, en: First release. }
+  webui:
+    service: navidrome
+    port: 4533
+    sso: proxy
+    proxy:
+      headers:
+        Remote-User: "{user}"
+  secrets:
+    password_encryption_key:
+      generate: { bytes: 32 }
+  permissions:
+    - storage.share.music:read
