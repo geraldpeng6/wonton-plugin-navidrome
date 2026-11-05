@@ -1,5 +1,5 @@
 # Navidrome 音乐库：用户的音乐放在共享文件夹 music 里，网页经核心网关登录（Remote-User 请求头代登录），
-# 经网关提供 Subsonic 兼容接口（第三方 Subsonic 客户端进不了网关）。上游 GPL-3.0-only，镜像按清单列表（index）的摘要固定。
+# 第三方 Subsonic 客户端连局域网端口，详情页的开关打开后显示地址和账号。上游 GPL-3.0-only，镜像按清单列表（index）的摘要固定。
 services:
   navidrome:
     image: deluan/navidrome:0.64.2@sha256:38dc2727bfcfd5ede290f8ada114fc90368146f265ae4701ddddbcbe2a44ee52
@@ -55,21 +55,6 @@ services:
         condition: service_healthy
     restart: "no"
 
-  # 让核心把 provision 当一次性服务（有人等它完成）；自己只占一个空转容器。
-  ready:
-    image: deluan/navidrome:0.64.2@sha256:38dc2727bfcfd5ede290f8ada114fc90368146f265ae4701ddddbcbe2a44ee52
-    user: "${PUID}:${PGID}"
-    entrypoint: ["/bin/sh", "-c", "while :; do sleep 3600; done"]
-    depends_on:
-      provision:
-        condition: service_completed_successfully
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "true"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-
 configs:
   provision:
     file: provision.sh
@@ -95,10 +80,14 @@ x-wonton:
       把共享文件夹里的音乐整理成自己的音乐库：按歌手、专辑和流派浏览、播放，建歌单。
 
       打开就用，不用再登录一次。音乐文件只读，不会被改动。
+
+      要用手机上的 Subsonic 播放器，在插件详情里打开“在局域网开放”，把显示的地址、账号和密码填进去。
     en: |
       Turn the music in your shared folder into your own library: browse and play by artist, album and genre, and build playlists.
 
       Opening the page is enough, there is no second login. Music files are read-only and never modified.
+
+      To use a Subsonic player on your phone, turn on the LAN switch in the plugin details and enter the address, account and password shown there.
   release_notes: { zh: 名字和说明更新。, en: Product name and description update. }
   webui:
     service: navidrome
@@ -107,6 +96,14 @@ x-wonton:
     proxy:
       headers:
         Remote-User: "{user}"
+  # 第三方 Subsonic 客户端连这个端口，详情页的开关打开后显示地址和账号。
+  lan:
+    ports:
+      - { service: navidrome, port: 4533 }
+    client:
+      address: "http://{host}:4533"
+      username: "{user}"
+      password: "{secret:client_password}"
   secrets:
     password_encryption_key:
       generate: { bytes: 32 }
@@ -114,6 +111,7 @@ x-wonton:
       generate: { bytes: 32 }
   permissions:
     - storage.share.music:read
+    - network.lan
     # 知道用户名：账号按注入的用户名建。
     - owner.identity
   # 上游没写最低内存；本机空闲实测约 62M，取 128M。镜像支持 amd64 和 arm64（docker manifest inspect）。
