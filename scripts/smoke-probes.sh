@@ -1,6 +1,5 @@
+# shellcheck shell=bash
 # Navidrome：sso=proxy（Remote-User 代登录）；Subsonic 接口经网关；清单没有 mcp。
-SSO=proxy
-MCP=0
 
 web_assert() { grep -qi 'navidrome'; }   # 标准输入：SPA 首页 HTML 含应用名
 
