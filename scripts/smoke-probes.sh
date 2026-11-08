@@ -15,6 +15,10 @@ identity_check() { # Subsonic getUser：认出用户且是管理员
 }
 
 # 合并前验证升级、重装不丢用户数据：建一条带随机标记的私有歌单，标记存进 $SMOKE_STATE。
+marker_file() { # SMOKE_STATE 在套件里是状态目录（e2e 传的是标记文件本身），标记放对应路径
+  if [[ -d "$SMOKE_STATE" ]]; then printf '%s' "$SMOKE_STATE/navidrome-marker"; else printf '%s' "${SMOKE_STATE}.marker"; fi
+}
+
 data_write() {
   local marker created
   marker="wonton-smoke-$(od -An -N6 -tx1 /dev/urandom | tr -d ' \n')"
@@ -24,12 +28,12 @@ data_write() {
     { echo "建歌单失败：$created"; return 1; }
   jq -e '.["subsonic-response"].status == "ok"' <<<"$created" >/dev/null ||
     { echo "建歌单不是 ok：$created"; return 1; }
-  printf '%s' "$marker" >"$SMOKE_STATE"
+  printf '%s' "$marker" >"$(marker_file)"
 }
 
 data_check() { # getPlaylists 里还有那条歌单
   local marker got
-  marker="$(cat "$SMOKE_STATE")"
+  marker="$(cat "$(marker_file)")"
   [[ -n "$marker" ]] || { echo "SMOKE_STATE 里没有标记"; return 1; }
   dweb / -L >/dev/null || { echo "打开首页失败，建不了应用会话"; return 1; }
   got="$(dweb "/rest/getPlaylists.view?v=1.16.1&c=wonton-smoke&f=json")" ||
