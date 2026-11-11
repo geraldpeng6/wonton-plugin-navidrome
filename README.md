@@ -1,6 +1,6 @@
 # 云吞插件：Navidrome
 
-开发流程见[插件开发指南](https://github.com/geraldpeng6/wonton-docs/blob/main/develop.md)。
+开发流程见[插件开发指南](https://github.com/wontonapp/wonton-docs/blob/main/develop.md)。
 
 把共享文件夹 `music` 里的音乐做成用户的流媒体音乐库，登录交给云吞的网关（`sso: proxy`，`Remote-User` 请求头代登录）。
 第三方 Subsonic 客户端连局域网端口：详情页的开关默认关，打开后显示地址和账号。
