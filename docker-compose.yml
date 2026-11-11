@@ -64,8 +64,8 @@ x-wonton:
   id: org.navidrome.navidrome
   version: 0.1.1
   kind: app
-  title: { en: Navidrome }
-  description: { zh: 把共享文件夹里的音乐变成你自己的流媒体音乐库, en: Turn the music in your shared folder into your own streaming library }
+  title: { zh: 家庭音乐库（Navidrome）, en: Home Music Library (Navidrome) }
+  description: { zh: 像自家的 QQ 音乐：共享文件夹里的歌按歌手、专辑整理好，网页里随时听；在家还能用手机上的音乐播放器 App 连上来听。轻快省资源，适合习惯用手机 App 听歌的人。, en: "Like your own Spotify: the songs in your shared folder sorted by artist and album, ready to play in the browser — and at home, many phone music apps can connect to it too. Light and quick; good if you like listening through a phone app." }
   icon: icon.png
   notices: [NOTICE]
   screenshots: [screenshots/home.png, screenshots/album.png, screenshots/player.png]
